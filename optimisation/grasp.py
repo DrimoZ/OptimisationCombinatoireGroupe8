@@ -80,7 +80,7 @@ def construct_grasp_solution(M: ndarray, alpha: float, taboo_list: list[ndarray]
     return P
 
 
-def metaheuristic_grasp(M: ndarray, grasp_max_iterations: int = 100, grasp_alpha: float = 0.1, vns_k_max: int = 3) -> tuple[ndarray, tuple[int, float]]:
+def metaheuristic_grasp(M: ndarray, grasp_max_iterations: int = 100, grasp_alpha: float = 0.1, vns_k_max: int = 3, vns_time_limit: int = 10) -> tuple[ndarray, tuple[int, float]]:
     """
     GRASP complet générant une solution optimale selon les paramètres donnés.
     
@@ -100,6 +100,9 @@ def metaheuristic_grasp(M: ndarray, grasp_max_iterations: int = 100, grasp_alpha
 
     :param vns_k_max: Nombre maximum de changements pour la recherche à voisinage variable
     :type vns_k_max: int
+    
+    :param vns_time_limit: Limite de temps pour la recherche à voisinage variable
+    :type vns_time_limit: int
 
     :return: Meilleur pattern trouvé et son score (rang, valeur singulière) associé
     :rtype: Tuple[np.ndarray, Tuple[int, float]]
@@ -123,7 +126,7 @@ def metaheuristic_grasp(M: ndarray, grasp_max_iterations: int = 100, grasp_alpha
             taboo_list.append(current_pattern)
 
             # Recherche à voisinnage variable sur le pattern courant
-            local_search_pattern, fobj_pattern = metaheuristic_vns(M, current_pattern, vns_k_max, taboo_list)
+            local_search_pattern, fobj_pattern = metaheuristic_vns(M, current_pattern, vns_k_max, vns_time_limit, taboo_list)
 
             # Comparaison avec la meilleure solution
             if compareP1betterthanP2(M, local_search_pattern, best_pattern):

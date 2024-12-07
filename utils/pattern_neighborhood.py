@@ -1,8 +1,9 @@
 from numpy import ndarray, array_equal, random
 from itertools import combinations
 from copy import deepcopy
+from time import time
 
-def generate_random_neighborhood(P: ndarray, k: int = 1, taboo_list: list[ndarray] = [], max_attempts: int = 1000) -> ndarray | None:
+def generate_random_neighborhood(P: ndarray, k: int = 1, taboo_list: list[ndarray] = [], max_attempts: int = 1000, vns_end_time: int = -1) -> ndarray | None:
     """
     Génère un voisin aléatoire d'un pattern.
     
@@ -19,6 +20,9 @@ def generate_random_neighborhood(P: ndarray, k: int = 1, taboo_list: list[ndarra
     
     :param max_attempts: Nombre maximal de tentatives pour générer un voisin
     :type max_attempts: int
+    
+    :param vns_end_time: Temps de fin de la métaheuristique VNS (uniquement pour utilisation avec VNS)
+    :type vns_end_time: int
     
     :return: Voisin aléatoire de pattern ou None si aucun voisin n'est trouvé
     :rtype: np.ndarray
@@ -40,6 +44,10 @@ def generate_random_neighborhood(P: ndarray, k: int = 1, taboo_list: list[ndarra
         # Retourner le voisin si ce n'est pas un pattern tabou
         if not any(array_equal(c, new_pattern) for c in taboo_list):
             return new_pattern
+        
+        # Arrêter si le temps de fin est atteint
+        if vns_end_time > 0 and time() > vns_end_time:
+            break
 
     # Si aucune solution n'est trouvée après max_attempts, retourner None
     return P

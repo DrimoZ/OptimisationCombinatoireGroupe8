@@ -1,10 +1,11 @@
 from numpy import ndarray
 from copy import deepcopy
+from time import time
 
 from utils.pattern_neighborhood import generate_complete_neighborhood
 from utils.problem_objective import compareP1betterthanP2
 
-def local_search(M: ndarray, P: ndarray, k: int = 1, taboo_list: list[ndarray] = [], max_neighborhood_attempts: int = 500) -> ndarray:
+def local_search(M: ndarray, P: ndarray, k: int = 1, taboo_list: list[ndarray] = [], max_neighborhood_attempts: int = 500, vns_end_time: int = -1) -> ndarray:
     """
     Recherche locale d'un pattern optimal avec gestion d'une liste tabou.
 
@@ -26,6 +27,9 @@ def local_search(M: ndarray, P: ndarray, k: int = 1, taboo_list: list[ndarray] =
     
     :param max_neighborhood_attempts: Nombre maximal de tentatives pour générer un voisin
     :type max_neighborhood_attempts: int
+    
+    :param vns_end_time: Temps de fin de la métaheuristique VNS (uniquement pour utilisation avec VNS)
+    :type vns_end_time: int
 
     :return: Pattern optimal
     :rtype: np.ndarray
@@ -52,6 +56,10 @@ def local_search(M: ndarray, P: ndarray, k: int = 1, taboo_list: list[ndarray] =
             if compareP1betterthanP2(M, neighbor, current_pattern):
                 current_pattern = neighbor
                 improved = True
+                break
+            
+            # Si le temps est écoulé, arrêter la recherche
+            if vns_end_time > 0 and time() > vns_end_time:
                 break
 
     # Retourner le pattern optimal

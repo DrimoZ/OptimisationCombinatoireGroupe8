@@ -11,16 +11,17 @@ random.seed(42)
 # Matrice cible
 M: ndarray
 
-# M = matrices1_ledm(5)
-M = matrices2_slackngon(7)
+M = matrices1_ledm(10)
+# M = matrices2_slackngon(7)
 # M = loadtxt('matrice_examples/correl5_matrix.txt', dtype=int)
 
 
 # Paramètres de la métaheuristique
-grasp_max_iterations = 10
+grasp_max_iterations = 50
 grasp_alpha = 0.01
 
 vns_k_max = 1
+vns_time_limit = 5
 
 
 # Temps de début
@@ -31,7 +32,7 @@ print("||=======================================================================
 
 
 # Metaheuristique
-best_pattern, best_fobj = metaheuristic_grasp(M, grasp_max_iterations, grasp_alpha, vns_k_max)
+best_pattern, best_fobj = metaheuristic_grasp(M, grasp_max_iterations, grasp_alpha, vns_k_max, vns_time_limit)
 print(f"||\n|| Best pattern found: ")
 for row in best_pattern:
     print(f"|| {row}")
