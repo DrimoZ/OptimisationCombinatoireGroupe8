@@ -71,7 +71,7 @@ def check_time():
     return True
   return False
     
-def metaheuristic_vns(M, k_max=3):
+def metaheuristic_vns(M: np.ndarray, p: np.ndarray = None, k_max=3):
   """
   Variable Neighborhood Search (VNS) pour minimiser les objectifs lexicographiques.
   - M : Matrice cible
@@ -80,7 +80,11 @@ def metaheuristic_vns(M, k_max=3):
   """
   # init pattern full +1
   #best_pattern = np.random.choice([-1, 1], M.shape)
-  best_pattern=np.ones(M.shape)
+
+  if p is not None:
+    best_pattern = p
+  else:
+    best_pattern = np.ones(M.shape)
   best_r, best_s = fobj(M, best_pattern) 
 
  
@@ -108,7 +112,7 @@ def metaheuristic_vns(M, k_max=3):
 
       #TIME
       if check_time():  # Si 10 secondes sont écoulées
-        return best_pattern, (best_r, best_s)
+        return best_pattern, [best_r, best_s]
 
       # Ajuster dynamiquement k_max
       if stagnation > 5:  # Si aucune amélioration pendant 5 voisinages
@@ -116,4 +120,4 @@ def metaheuristic_vns(M, k_max=3):
       elif stagnation == 0:
           k_max = max(3, k_max - 1)  # Réduire k_max si les améliorations sont fréquentes
 
-  return best_pattern, (best_r, best_s)
+  return best_pattern, [best_r, best_s]
