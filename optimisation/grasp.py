@@ -80,7 +80,7 @@ def construct_grasp_solution(M: ndarray, alpha: float, taboo_list: list[ndarray]
     return P
 
 
-def metaheuristic_grasp(M: ndarray, grasp_max_iterations: int = 100, grasp_alpha: float = 0.1, vns_k_max: int=3) -> tuple[ndarray, tuple[int, float]]:
+def metaheuristic_grasp(M: ndarray, grasp_max_iterations: int = 100, grasp_alpha: float = 0.1, vns_k_max: int = 3) -> tuple[ndarray, tuple[int, float]]:
     """
     GRASP complet générant une solution optimale selon les paramètres donnés.
     

@@ -1,4 +1,5 @@
-from numpy import ndarray, ones
+from numpy import ndarray, ones, array_equal
+from time import time
 
 from utils.problem_objective import fobj, compareP1betterthanP2
 from utils.pattern_neighborhood import generate_random_neighborhood
@@ -26,6 +27,8 @@ def metaheuristic_vns(M: ndarray, P: ndarray = None, k_max: int = 3, taboo_list:
     :return: Pattern optimal et son évaluation
     :rtype: tuple[np.ndarray, tuple[int, float]]
     """
+    
+    start_timestamp: float = time()
 
     # Initialisation
     k: int = 1
@@ -41,11 +44,14 @@ def metaheuristic_vns(M: ndarray, P: ndarray = None, k_max: int = 3, taboo_list:
     while k <= k_max:
         
         # Shaking : générer une solution aléatoire dans N_k(best_pattern)
-        s_prime: ndarray = generate_random_neighborhood(best_pattern, k, taboo_list)
+        s_prime: ndarray = generate_random_neighborhood(best_pattern, k, taboo_list, 200)
         
         # Local search : optimiser autour de s_prime
         s_double_prime: ndarray = local_search(M, s_prime, k, taboo_list)
-
+        
+        if array_equal(s_prime, best_pattern) and array_equal(s_double_prime, s_prime):
+            stagnation += 1
+        
         # Mise à jour si amélioration
         if compareP1betterthanP2(M, s_double_prime, best_pattern):
             best_pattern = s_double_prime
@@ -57,6 +63,14 @@ def metaheuristic_vns(M: ndarray, P: ndarray = None, k_max: int = 3, taboo_list:
             
         # Ajouter le pattern courant à la liste tabou
         taboo_list.append(s_double_prime)
+        
+        # Si la liste tabou est pleine, arrêter la recherche
+        if len(taboo_list) >= 2 ** (M.shape[0] * M.shape[1]):
+            break
+        
+        # Si 10 secondes se sont écoulées, arrêter la recherche
+        if time() - start_timestamp >= 10:
+            break
 
         # Ajuster dynamiquement k_max
         if stagnation > 5:  # Si aucune amélioration pendant 5 voisinages

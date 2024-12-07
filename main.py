@@ -17,10 +17,10 @@ M = matrices2_slackngon(7)
 
 
 # Paramètres de la métaheuristique
-grasp_max_iterations = 5000
-grasp_alpha = 0.001
+grasp_max_iterations = 10
+grasp_alpha = 0.01
 
-vns_k_max = 2
+vns_k_max = 1
 
 
 # Temps de début
