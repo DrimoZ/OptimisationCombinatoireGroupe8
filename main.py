@@ -1,19 +1,19 @@
-from orthogonal_matrix import matrices1_ledm, matrices2_slackngon
-from grasp import metaheuristic_grasp
+from utils.orthogonal_matrix import matrices1_ledm, matrices2_slackngon
+from optimisation.grasp import metaheuristic_grasp
 from datetime import datetime, timedelta
 from numpy import ndarray, random, loadtxt
 
 
 # Definition d'une Seed pour la reproductibilité 
-# random.seed(42)
+random.seed(42)
 
 
 # Matrice cible
 M: ndarray
 
 # M = matrices1_ledm(5)
-# M = matrices2_slackngon(7)
-M = loadtxt('matrice_examples/correl5_matrix.txt', dtype=int)
+M = matrices2_slackngon(7)
+# M = loadtxt('matrice_examples/correl5_matrix.txt', dtype=int)
 
 
 # Paramètres de la métaheuristique
