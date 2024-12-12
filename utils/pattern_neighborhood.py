@@ -34,7 +34,7 @@ def generate_random_neighborhood(P: ndarray, k: int = 1, taboo_list: list[ndarra
     max_end_time: int = time() + max_duration / 1_000_000 if max_duration > 0 else -1
     
     # Initialiser le nombre maximal de tentatives
-    max_attempts = max_attempts if max_attempts > 0 else n * m
+    max_attempts = min(max_attempts, n * m) if max_attempts > 0 else n * m
 
     for _ in range(max_attempts):
         # Créer une copie du pattern initial
