@@ -2,6 +2,7 @@ from numpy import ndarray, random, array, array_equal, ones
 
 from utils.problem_objective import fobj, compareP1betterthanP2
 from optimisation.variable_neighborhood_search import metaheuristic_vns
+from optimisation.local_search import local_search
 
 def construct_grasp_solution(M: ndarray, alpha: float, taboo_list: list[ndarray] = []) -> ndarray:
     """
@@ -56,9 +57,8 @@ def construct_grasp_solution(M: ndarray, alpha: float, taboo_list: list[ndarray]
             (1, rank1, singular1),
             (-1, rank2, singular2)
         ]
-        
         # Trier les candidats par leur rang, puis par leur singularité
-        candidates.sort(key=lambda x: (x[1], -x[2]), reverse=True)
+        candidates.sort(key=lambda x: (x[1], x[2]))
         
         # Construire la RCL (Restricted Candidate List)
         best_rank = candidates[0][1]
@@ -80,7 +80,7 @@ def construct_grasp_solution(M: ndarray, alpha: float, taboo_list: list[ndarray]
     return P
 
 
-def metaheuristic_grasp(M: ndarray, grasp_max_iterations: int = 100, grasp_alpha: float = 0.1, vns_k_max: int = 3, vns_time_limit: int = 10) -> tuple[ndarray, tuple[int, float]]:
+def metaheuristic_grasp(M: ndarray, grasp_max_iterations: int = 100, grasp_alpha: float = 0.1, vns_k_max: int = 3, vns_time_limit: int = -1) -> tuple[ndarray, tuple[int, float]]:
     """
     GRASP complet générant une solution optimale selon les paramètres donnés.
     
@@ -126,12 +126,14 @@ def metaheuristic_grasp(M: ndarray, grasp_max_iterations: int = 100, grasp_alpha
             taboo_list.append(current_pattern)
 
             # Recherche à voisinnage variable sur le pattern courant
-            local_search_pattern, fobj_pattern = metaheuristic_vns(M, current_pattern, vns_k_max, vns_time_limit, taboo_list)
+            # local_search_pattern = local_search(M=M, P=current_pattern, taboo_list=taboo_list, max_duration=10_000_000)
+            local_search_pattern, fobj_pattern = metaheuristic_vns(M, best_pattern, current_pattern, vns_k_max, vns_time_limit, taboo_list)
+            # local_search_pattern = current_pattern
 
             # Comparaison avec la meilleure solution
             if compareP1betterthanP2(M, local_search_pattern, best_pattern):
                 best_pattern = local_search_pattern
-                best_fobj = fobj_pattern
+                best_fobj = fobj(M, local_search_pattern)
 
             if len(taboo_list) >= 2 ** (M.shape[0] * M.shape[1]):
                 break

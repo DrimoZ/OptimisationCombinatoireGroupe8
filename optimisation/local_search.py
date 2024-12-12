@@ -5,7 +5,7 @@ from time import time
 from utils.pattern_neighborhood import generate_complete_neighborhood
 from utils.problem_objective import compareP1betterthanP2
 
-def local_search(M: ndarray, P: ndarray, k: int = 1, taboo_list: list[ndarray] = [], max_neighborhood_attempts: int = 500, vns_end_time: int = -1) -> ndarray:
+def local_search(M: ndarray, P: ndarray, k: int = 1, taboo_list: list[ndarray] = [], max_neighborhood_attempts: int = -1, max_duration: int = -1) -> ndarray:
     """
     Recherche locale d'un pattern optimal avec gestion d'une liste tabou.
 
@@ -25,15 +25,17 @@ def local_search(M: ndarray, P: ndarray, k: int = 1, taboo_list: list[ndarray] =
     :param taboo_list: Liste des patterns tabous (déjà explorés et évalués)
     :type taboo_list: list[np.ndarray]
     
-    :param max_neighborhood_attempts: Nombre maximal de tentatives pour générer un voisin
+    :param max_neighborhood_attempts: Nombre maximal de tentatives pour générer un voisin (défaut: -1 = pas de limite)
     :type max_neighborhood_attempts: int
     
-    :param vns_end_time: Temps de fin de la métaheuristique VNS (uniquement pour utilisation avec VNS)
-    :type vns_end_time: int
+    :param max_duration: Durée maximale de la recherche (en microsecondes) (défaut: -1 = pas de limite)
+    :type max_duration: int
 
     :return: Pattern optimal
     :rtype: np.ndarray
     """
+    
+    max_end_time: int = time() + max_duration / 1_000_000 if max_duration > 0 else -1
     
     # Initialiser le pattern courant
     current_pattern: ndarray = deepcopy(P)
@@ -43,12 +45,16 @@ def local_search(M: ndarray, P: ndarray, k: int = 1, taboo_list: list[ndarray] =
     while improved:
         improved = False
 
-        # Générer le voisinage en fonction de k (en excluant les patterns tabous)
-        neighborhood: list[ndarray] = generate_complete_neighborhood(current_pattern, k, taboo_list, max_neighborhood_attempts)
+        # Générer le voisinage en fonction de k (en excluant les patterns tabous)        
+        neighborhood: list[ndarray] = generate_complete_neighborhood(current_pattern, k, taboo_list, max_neighborhood_attempts, 
+                                                                    max_end_time - time() if max_end_time > 0 else -1)
+        
+        # Si le voisinage est vide, arrêter la recherche
         if len(neighborhood) == 0:
             break
 
         for neighbor in neighborhood:
+            
             # Ajouter le voisin à la liste tabou
             taboo_list.append(neighbor)
             
@@ -59,7 +65,7 @@ def local_search(M: ndarray, P: ndarray, k: int = 1, taboo_list: list[ndarray] =
                 break
             
             # Si le temps est écoulé, arrêter la recherche
-            if vns_end_time > 0 and time() > vns_end_time:
+            if max_duration > 0 and time() > max_end_time:
                 break
 
     # Retourner le pattern optimal

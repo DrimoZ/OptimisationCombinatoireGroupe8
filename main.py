@@ -5,23 +5,23 @@ from numpy import ndarray, random, loadtxt
 
 
 # Definition d'une Seed pour la reproductibilité 
-random.seed(42)
+# random.seed(42)
 
 
 # Matrice cible
 M: ndarray
 
-M = matrices1_ledm(10)
+M = matrices1_ledm(6)
 # M = matrices2_slackngon(7)
 # M = loadtxt('matrice_examples/correl5_matrix.txt', dtype=int)
 
 
 # Paramètres de la métaheuristique
-grasp_max_iterations = 50
-grasp_alpha = 0.01
+grasp_max_iterations = 500
+grasp_alpha = 0.001
 
-vns_k_max = 1
-vns_time_limit = 5
+vns_k_max = 2
+vns_time_limit = 3 * 1_000_000
 
 
 # Temps de début
