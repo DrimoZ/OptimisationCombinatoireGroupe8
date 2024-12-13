@@ -1,9 +1,15 @@
+import matplotlib.pyplot
 from numpy import ndarray, random, array, array_equal, ones
 
 from utils.problem_objective import fobj, compareP1betterthanP2
 from optimisation.variable_neighborhood_search import metaheuristic_vns
 from optimisation.local_search import local_search
 from optimisation.simulated_annealing import simulated_annealing
+from optimisation.new_grasp_construction import *
+
+from options import GraspOptions, VnsOptions
+
+import matplotlib.pyplot as plt
 
 def construct_grasp_solution(M: ndarray, alpha: float, taboo_list: list[ndarray] = []) -> ndarray:
     """
@@ -29,9 +35,9 @@ def construct_grasp_solution(M: ndarray, alpha: float, taboo_list: list[ndarray]
     # Initialisation de la matrice P avec des valeurs aléatoires
     m, n = M.shape
     
-    # P = random.choice([-1, 1], size=(m, n))
-    P = ones((m, n))
-    P = simulated_annealing(M, P, max_iterations=1000, initial_temp=1000, cooling_rate=0.99)
+    P = random.choice([-1, 1], size=(m, n))
+    # P = ones((m, n))
+    # P = simulated_annealing(M, P, max_iterations=10000, initial_temp=1000, cooling_rate=0.99)
     
     # Initialisation de l'ordre de parcours des éléments de P
     order: list = []
@@ -60,9 +66,8 @@ def construct_grasp_solution(M: ndarray, alpha: float, taboo_list: list[ndarray]
             (1, rank1, singular1),
             (-1, rank2, singular2)
         ]
-        # Trier les candidats par leur rang, puis par leur singularité
-        candidates.sort(key=lambda x: (x[1], x[2]))
-        # print(len(candidates))
+        # Trier les candidats par leur rang, puis par leur singularité (plus petit rang ; plus petite des plus petites singularités)
+        candidates.sort(key=lambda x: (x[1], -x[2]))
         
         # Construire la RCL (Restricted Candidate List)
         best_rank = candidates[0][1]
@@ -84,7 +89,7 @@ def construct_grasp_solution(M: ndarray, alpha: float, taboo_list: list[ndarray]
     return P
 
 
-def metaheuristic_grasp(M: ndarray, grasp_max_iterations: int = 100, grasp_alpha: float = 0.1, vns_k_max: int = 3, vns_time_limit: int = -1) -> tuple[ndarray, tuple[int, float]]:
+def metaheuristic_grasp(M: ndarray, options: GraspOptions) -> tuple[ndarray, tuple[int, float]]:
     """
     GRASP complet générant une solution optimale selon les paramètres donnés.
     
@@ -95,58 +100,81 @@ def metaheuristic_grasp(M: ndarray, grasp_max_iterations: int = 100, grasp_alpha
     
     :param M: Matrice cible
     :type M: np.ndarray
-
-    :param grasp_max_iterations: Nombre maximum d'itérations
-    :type grasp_max_iterations: int
-
-    :param grasp_alpha: Facteur de construction de la RCL
-    :type grasp_alpha: float
-
-    :param vns_k_max: Nombre maximum de changements pour la recherche à voisinage variable
-    :type vns_k_max: int
-    
-    :param vns_time_limit: Limite de temps pour la recherche à voisinage variable
-    :type vns_time_limit: int
-
-    :return: Meilleur pattern trouvé et son score (rang, valeur singulière) associé
-    :rtype: Tuple[np.ndarray, Tuple[int, float]]
     """
 
     # Initialisation des variables de la métaheuristique
     best_pattern:ndarray = ones(M.shape, dtype=int)
     best_fobj: tuple[int, float] = fobj(M, best_pattern)
+    
+    # Initialisation pour les graphiques
+    iteration_list = []
+    rank_list = []
+    singular_value_list = []
 
-    # Definition d'une liste des candidats testés
-    taboo_list: list[ndarray] = [best_pattern]
+    # Liste des solutions explorées
+    tested_patterns: Set[tuple] = set()
 
     # Boucle principale de la métaheuristique
-    for current_iteration in range(grasp_max_iterations):
+    for current_iteration in range(options.iterations):
 
         # Construction d'un pattern
-        current_pattern: ndarray = construct_grasp_solution(M, grasp_alpha, taboo_list)
+        # current_pattern: ndarray = construct_grasp_solution(M, grasp_alpha, tested_patterns)
+        current_pattern: ndarray = grasp_constructive_optimized(M, tested_patterns, options.construction_options)
 
         # Vérifier l'unicité des solutions avant de les ajouter
-        if not any(array_equal(current_pattern, sol) for sol in taboo_list):
-            taboo_list.append(current_pattern)
+        if not pattern_to_tuple(current_pattern) in tested_patterns:
+            tested_patterns.add(pattern_to_tuple(current_pattern))
 
             # Recherche à voisinnage variable sur le pattern courant
             # local_search_pattern = local_search(M=M, P=current_pattern, taboo_list=taboo_list, max_duration=10_000_000)
-            local_search_pattern, fobj_pattern = metaheuristic_vns(M, best_pattern, current_pattern, vns_k_max, vns_time_limit, [])
-            # local_search_pattern = current_pattern
+            # local_search_pattern, fobj_pattern = metaheuristic_vns(M, best_pattern, current_pattern, vns_k_max, vns_time_limit, [])
+            local_search_pattern = current_pattern
 
             # Comparaison avec la meilleure solution
             if compareP1betterthanP2(M, local_search_pattern, best_pattern):
                 best_pattern = local_search_pattern
                 best_fobj = fobj(M, local_search_pattern)
                 
-                if (best_fobj[0] == 2):
-                    break
+                
+             # Enregistrer les résultats pour les graphiques
+            iteration_list.append(current_iteration + 1)
+            rank_list.append(best_fobj[0])
+            singular_value_list.append(best_fobj[1])
+            
+                # if (best_fobj[0] == 2):
+                    # break
 
-            if len(taboo_list) >= 2 ** (M.shape[0] * M.shape[1]):
+            if len(tested_patterns) >= 2 ** (M.shape[0] * M.shape[1]):
                 break
+
 
     # Console information
     print(f"||\n|| Realised {current_iteration + 1} iterations")
-    print(f"|| Taboo list size: {len(taboo_list)}")
+    print(f"|| Taboo list size: {len(tested_patterns)}")
+    
+    # Affichage des graphiques
+    plt.figure(figsize=(12, 6))
+
+    # Évolution du rang
+    plt.subplot(1, 2, 1)
+    plt.plot(iteration_list, rank_list, marker='o', label='Rang')
+    plt.xlabel("Itérations")
+    plt.ylabel("Rang")
+    plt.title("Évolution du Rang")
+    plt.grid()
+    plt.legend()
+
+    # Évolution de la plus petite valeur singulière
+    plt.subplot(1, 2, 2)
+    plt.plot(iteration_list, singular_value_list, marker='o', color='orange', label='Valeur singulière')
+    plt.xlabel("Itérations")
+    plt.ylabel("Plus petite valeur singulière")
+    plt.title("Évolution de la plus petite valeur singulière")
+    plt.grid()
+    plt.legend()
+
+    # Affichage final
+    plt.tight_layout()
+    plt.show()
 
     return best_pattern, best_fobj

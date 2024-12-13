@@ -1,27 +1,28 @@
-from utils.orthogonal_matrix import matrices1_ledm, matrices2_slackngon
-from optimisation.grasp import metaheuristic_grasp
 from datetime import datetime, timedelta
 from numpy import ndarray, random, loadtxt
+
+from utils.orthogonal_matrix import matrices1_ledm, matrices2_slackngon
+from optimisation.grasp import metaheuristic_grasp
+
+from optimisation.genetic import genetic_algorithm
+
+from options import GraspOptions, MatrixOptions
+
 
 
 # Definition d'une Seed pour la reproductibilité 
 random.seed(42)
 
+# Paramètres de l'algorithme
+matrix_options = MatrixOptions()
+grasp_options = GraspOptions()
 
 # Matrice cible
 M: ndarray
 
-M = matrices1_ledm(12)
-# M = matrices2_slackngon(7)
+M = matrices1_ledm(matrix_options.n)
+# M = matrices2_slackngon(matrix_options.n)
 # M = loadtxt('matrice_examples/correl5_matrix.txt', dtype=int)
-
-
-# Paramètres de la métaheuristique
-grasp_max_iterations = 100
-grasp_alpha = 0.01
-
-vns_k_max = 1
-vns_time_limit = 4 * 1_000_000
 
 
 # Temps de début
@@ -31,8 +32,13 @@ print(f"|| Grasp started on {starttime.date()} at {starttime.time()}            
 print("||=======================================================================||")
 
 
+
 # Metaheuristique
-best_pattern, best_fobj = metaheuristic_grasp(M, grasp_max_iterations, grasp_alpha, vns_k_max, vns_time_limit)
+best_pattern, best_fobj = metaheuristic_grasp(M, grasp_options)
+
+# Genetic Algorithm
+# best_pattern, best_fobj = genetic_algorithm(M, M.shape[0] * M.shape[1], 20000, 0.9999)
+
 print(f"||\n|| Best pattern found: ")
 for row in best_pattern:
     print(f"|| {row}")
