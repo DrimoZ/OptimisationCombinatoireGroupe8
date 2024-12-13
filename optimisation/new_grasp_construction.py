@@ -1,11 +1,8 @@
-from numpy import ndarray, ones, random, inf, array, meshgrid
-from typing import Set
-from itertools import combinations, product
-from copy import deepcopy
-from random import sample, choices
+from numpy import ndarray, ones, random, inf, arange, copy, put, take
+from random import choices
 
-from utils.problem_objective import fobj
-from options import GraspConstructionOptions
+from utils.problem_objective import fobj, compareP1betterthanP2
+from options import GraspConstructionOptions, LocalSearchOptions
 
 
 def pattern_to_tuple(P: ndarray) -> tuple:
@@ -38,7 +35,7 @@ def perturb_pattern(P: ndarray, perturbation_rate: float) -> ndarray:
     
     return P
 
-def grasp_constructive_optimized(M: ndarray, tested_patterns: Set[tuple], options: GraspConstructionOptions) -> ndarray:
+def grasp_constructive_optimized(M: ndarray, tested_patterns: set[tuple], options: GraspConstructionOptions) -> ndarray:
     """
     Optimized GRASP construction algorithm with minimal randomization and perturbation.
 
@@ -53,8 +50,8 @@ def grasp_constructive_optimized(M: ndarray, tested_patterns: Set[tuple], option
     """
     
     # Pattern initialization
-    n = M.shape[0]
-    P = random.choice([1, -1], size=(n, n))
+    n, m = M.shape
+    P = random.choice([1, -1], size=(n, m))
     # P = np.ones((n, n))  # Initialize pattern with all ones
     
     # Variables initialization
@@ -88,7 +85,7 @@ def grasp_constructive_optimized(M: ndarray, tested_patterns: Set[tuple], option
             sampled_values = [choices([1, -1], k=len(group)) for _ in range(len(group))]
             
             for value_combination in sampled_values:
-                P_temp = deepcopy(P)
+                P_temp = copy(P)
                 for (i, j), value in zip(group, value_combination):
                     P_temp[i, j] = value
 
@@ -98,6 +95,7 @@ def grasp_constructive_optimized(M: ndarray, tested_patterns: Set[tuple], option
                 if cost < best_cost:
                     best_cost = cost
                     best_values = {pos: val for pos, val in zip(group, value_combination)}
+                
 
             costs.append((group, best_values, best_cost))
 
@@ -114,9 +112,7 @@ def grasp_constructive_optimized(M: ndarray, tested_patterns: Set[tuple], option
 
         # Check for repetition and mutate if necessary
         current_pattern_tuple = pattern_to_tuple(P)
-        while current_pattern_tuple in tested_patterns and repetition_count < options.max_repetitions:
-            
-            print("Repetition detected, perturbing pattern...")
+        while current_pattern_tuple in tested_patterns and repetition_count < options.max_repetitions:            
             P = perturb_pattern(P, local_perturbation_rate)
             current_pattern_tuple = pattern_to_tuple(P)
             repetition_count += 1
@@ -145,3 +141,108 @@ def grasp_constructive_optimized(M: ndarray, tested_patterns: Set[tuple], option
         last_cost = current_cost
 
     return P
+
+def generate_complete_neighborhood(P: ndarray, neighborhood_size_factor: float, mutation_factor: float, tested_patterns: set[tuple]) -> list[ndarray]:
+    """
+    Generate the complete neighborhood of a pattern {P} by changing {mutation_count} elements.
+    Avoids patterns already tested in the tabu list.
+
+    :param P: Initial pattern
+    :type P: np.ndarray
+
+    :param neighborhood_size_factor: Size of the neighborhood as a fraction of the pattern size
+    :type neighborhood_size: float
+    
+    :param mutation_factor: Fraction of elements to mutate in the neighborhood
+    :type mutation_factor: float
+    
+    :param tested_patterns: Set of tested patterns
+    :type tested_patterns: set[tuple]
+    
+    :return: List of neighbors
+    :rtype: list[np.ndarray]
+    """
+    
+    # Initialize the neighborhood
+    n, m = P.shape
+    neighborhood = []
+    tested_neighbors = set()
+    iteration_count = 0
+    
+    neighborhood_size = max(1, int(neighborhood_size_factor * n * m))
+    mutation_count = max(1, int(mutation_factor * n * m))
+    all_indices = arange(n * m)
+    
+    # Generate neighbors until the neighborhood is full
+    while len(neighborhood) < neighborhood_size and iteration_count < n * m:
+        mutation_indices = random.choice(all_indices, mutation_count, replace=False)
+        
+        # Mutate the neighbor by flipping the values at the mutation indices
+        neighbor = copy(P)
+        put(neighbor, mutation_indices, -take(neighbor, mutation_indices))  # Efficient mutation
+
+        
+        # Add the neighbor to the neighborhood if it is unique
+        neighbor_tuple = pattern_to_tuple(neighbor)
+        if neighbor_tuple not in tested_patterns and neighbor_tuple not in tested_neighbors:
+            neighborhood.append(neighbor)
+            tested_neighbors.add(neighbor_tuple)
+    
+    return neighborhood
+
+def optimized_local_search(M: ndarray, P: ndarray, tested_patterns: set[tuple], options: LocalSearchOptions) -> ndarray:
+    """
+    Optimized local search algorithm with tabu list management.
+    
+    Local search is an iterative method that explores the neighborhood
+    of an initial pattern P to find an optimal pattern. Patterns
+    already tested are added to the tabu list to avoid redundancies.
+    
+    :param M: Target matrix
+    :type M: np.ndarray
+    
+    :param P: Initial pattern
+    :type P: np.ndarray
+    
+    :param tested_patterns: Set of tested patterns
+    :type tested_patterns: set[tuple]
+    
+    :param options: Local search options
+    :type options: LocalSearchOptions
+    
+    :return: Optimal pattern
+    :rtype: np.ndarray
+    """
+    
+    # Initialize the current pattern
+    current_pattern = copy(P)
+    
+    # Initialize variables
+    improved = True
+    stagnation_count = 0
+    max_stagnation = options.max_stagnation
+    
+    # While there is improvement
+    while improved and stagnation_count < max_stagnation:
+        improved = False
+        stagnation_count += 1
+        
+        # Generate the neighborhood based on k (excluding tabu patterns)
+        neighborhood = generate_complete_neighborhood(current_pattern, options.max_neighborhood_size, options.neighborhood_mutation_factor, tested_patterns)
+        
+        # Break if the neighborhood is empty
+        if not neighborhood:
+            break
+        
+        # Add to tested patterns
+        tested_patterns.add(pattern_to_tuple(current_pattern))
+        
+        # Compare neighbors to find the best one
+        best_neighbor = None
+        for neighbor in neighborhood:
+            if compareP1betterthanP2(M, neighbor, current_pattern):
+                best_neighbor = neighbor
+                improved = True
+        
+        if improved:
+            current_pattern = best_neighbor

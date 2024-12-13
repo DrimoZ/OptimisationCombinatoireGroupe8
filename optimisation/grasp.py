@@ -112,7 +112,7 @@ def metaheuristic_grasp(M: ndarray, options: GraspOptions) -> tuple[ndarray, tup
     singular_value_list = []
 
     # Liste des solutions explorées
-    tested_patterns: Set[tuple] = set()
+    tested_patterns: set[tuple] = set()
 
     # Boucle principale de la métaheuristique
     for current_iteration in range(options.iterations):
@@ -126,7 +126,7 @@ def metaheuristic_grasp(M: ndarray, options: GraspOptions) -> tuple[ndarray, tup
             tested_patterns.add(pattern_to_tuple(current_pattern))
 
             # Recherche à voisinnage variable sur le pattern courant
-            # local_search_pattern = local_search(M=M, P=current_pattern, taboo_list=taboo_list, max_duration=10_000_000)
+            local_search_pattern = optimized_local_search(M=M, P=current_pattern, tested_patterns=tested_patterns, options=options.local_search_options)
             # local_search_pattern, fobj_pattern = metaheuristic_vns(M, best_pattern, current_pattern, vns_k_max, vns_time_limit, [])
             local_search_pattern = current_pattern
 
