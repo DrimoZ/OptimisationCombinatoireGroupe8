@@ -3,6 +3,7 @@ from numpy import ndarray, random, array, array_equal, ones
 from utils.problem_objective import fobj, compareP1betterthanP2
 from optimisation.variable_neighborhood_search import metaheuristic_vns
 from optimisation.local_search import local_search
+from optimisation.simulated_annealing import simulated_annealing
 
 def construct_grasp_solution(M: ndarray, alpha: float, taboo_list: list[ndarray] = []) -> ndarray:
     """
@@ -27,8 +28,10 @@ def construct_grasp_solution(M: ndarray, alpha: float, taboo_list: list[ndarray]
 
     # Initialisation de la matrice P avec des valeurs aléatoires
     m, n = M.shape
-    P = random.choice([-1, 1], size=(m, n))
-    # P = np.ones((m, n))
+    
+    # P = random.choice([-1, 1], size=(m, n))
+    P = ones((m, n))
+    P = simulated_annealing(M, P, max_iterations=1000, initial_temp=1000, cooling_rate=0.99)
     
     # Initialisation de l'ordre de parcours des éléments de P
     order: list = []
@@ -59,6 +62,7 @@ def construct_grasp_solution(M: ndarray, alpha: float, taboo_list: list[ndarray]
         ]
         # Trier les candidats par leur rang, puis par leur singularité
         candidates.sort(key=lambda x: (x[1], x[2]))
+        # print(len(candidates))
         
         # Construire la RCL (Restricted Candidate List)
         best_rank = candidates[0][1]
@@ -67,7 +71,7 @@ def construct_grasp_solution(M: ndarray, alpha: float, taboo_list: list[ndarray]
 
         # Retrait des solutions déjà testées
         rcl = [c for c in rcl if not any(array_equal(c[0], sol) for sol in taboo_list)]
-
+    
         # Sélection probabiliste biaisée
         probabilities = array([1.0 / (i + 1) for i in range(len(rcl))])
         probabilities /= probabilities.sum()  # Normalisation des probabilités
@@ -127,13 +131,16 @@ def metaheuristic_grasp(M: ndarray, grasp_max_iterations: int = 100, grasp_alpha
 
             # Recherche à voisinnage variable sur le pattern courant
             # local_search_pattern = local_search(M=M, P=current_pattern, taboo_list=taboo_list, max_duration=10_000_000)
-            local_search_pattern, fobj_pattern = metaheuristic_vns(M, best_pattern, current_pattern, vns_k_max, vns_time_limit, taboo_list)
+            local_search_pattern, fobj_pattern = metaheuristic_vns(M, best_pattern, current_pattern, vns_k_max, vns_time_limit, [])
             # local_search_pattern = current_pattern
 
             # Comparaison avec la meilleure solution
             if compareP1betterthanP2(M, local_search_pattern, best_pattern):
                 best_pattern = local_search_pattern
                 best_fobj = fobj(M, local_search_pattern)
+                
+                if (best_fobj[0] == 2):
+                    break
 
             if len(taboo_list) >= 2 ** (M.shape[0] * M.shape[1]):
                 break

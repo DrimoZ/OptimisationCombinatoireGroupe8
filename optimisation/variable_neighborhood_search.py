@@ -4,6 +4,7 @@ from time import time
 from utils.problem_objective import fobj, compareP1betterthanP2
 from utils.pattern_neighborhood import generate_random_neighborhood
 from optimisation.local_search import local_search  
+from optimisation.simulated_annealing import simulated_annealing
 
 def metaheuristic_vns(M: ndarray, best_pattern: ndarray = None, current_pattern: ndarray = None, k_max: int = 3, max_duration: int = -1, taboo_list: list[ndarray] = []) -> tuple[ndarray, tuple[int, float]]:
     """
@@ -49,10 +50,11 @@ def metaheuristic_vns(M: ndarray, best_pattern: ndarray = None, current_pattern:
     while k <= k_max_iter:
         
         # Shaking : générer une solution aléatoire dans N_k(best_pattern)
-        s_prime: ndarray = generate_random_neighborhood(current_pattern, k, taboo_list, 200, max_end_time - time() if max_end_time > 0 else -1)
+        s_prime: ndarray = generate_random_neighborhood(current_pattern, k, [], 200, max_end_time - time() if max_end_time > 0 else -1)
         
         # Local search : optimiser autour de s_prime
-        s_double_prime: ndarray = local_search(M, s_prime, k, taboo_list, 200, max_end_time - time() if max_end_time > 0 else -1)
+        # s_double_prime: ndarray = local_search(M, s_prime, k, [], 200, max_end_time - time() if max_end_time > 0 else -1)
+        s_double_prime = simulated_annealing(M, s_prime)
                 
         # Mise à jour si amélioration
         if compareP1betterthanP2(M, s_double_prime, vns_best_pattern):

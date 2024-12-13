@@ -3,7 +3,7 @@ from numpy import ndarray, random, exp
 from utils.pattern_neighborhood import generate_random_neighborhood
 from utils.problem_objective import fobj
 
-def simulated_annealing(M, initial_solution, max_iterations=100000, initial_temp=1000000, cooling_rate=0.99):
+def simulated_annealing(M, initial_solution, max_iterations=100000, initial_temp=100000, cooling_rate=0.999):
   current_solution = initial_solution
   current_score = fobj(M, current_solution)
   best_solution = current_solution
