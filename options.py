@@ -11,16 +11,17 @@ class VnsOptions:
     
 @dataclass
 class GraspConstructionOptions:
-    alpha: float = 0.9999
-    lambda_: float = 0.9
-    tolerance: float = 0.001
+    alpha: float = 0.99
+    lambda_: float = 0.01
+    tolerance: float = 0.1
     max_repetitions: int = 50
-    max_stagnation: int = 500
-    perturbation_rate: float = 0.70
+    max_stagnation: int = 10
+    perturbation_rate: float = 0.3
+    max_fixed_candidates_per_iteration: int = 5
 
 @dataclass
 class GraspOptions:
-    iterations: int = 500
+    iterations: int = 10000
     
     construction_options: GraspConstructionOptions = field(default_factory=GraspConstructionOptions)
     vns_options: VnsOptions = field(default_factory=VnsOptions)

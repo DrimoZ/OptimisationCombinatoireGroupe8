@@ -89,7 +89,7 @@ def construct_grasp_solution(M: ndarray, alpha: float, taboo_list: list[ndarray]
     return P
 
 
-def metaheuristic_grasp(M: ndarray, options: GraspOptions) -> tuple[ndarray, tuple[int, float]]:
+def metaheuristic_grasp(M: ndarray, options: GraspOptions) -> tuple[ndarray, tuple[int, float], list[int], list[int], list[float]]:
     """
     GRASP complet générant une solution optimale selon les paramètres donnés.
     
@@ -151,30 +151,5 @@ def metaheuristic_grasp(M: ndarray, options: GraspOptions) -> tuple[ndarray, tup
     # Console information
     print(f"||\n|| Realised {current_iteration + 1} iterations")
     print(f"|| Taboo list size: {len(tested_patterns)}")
-    
-    # Affichage des graphiques
-    plt.figure(figsize=(12, 6))
 
-    # Évolution du rang
-    plt.subplot(1, 2, 1)
-    plt.plot(iteration_list, rank_list, marker='o', label='Rang')
-    plt.xlabel("Itérations")
-    plt.ylabel("Rang")
-    plt.title("Évolution du Rang")
-    plt.grid()
-    plt.legend()
-
-    # Évolution de la plus petite valeur singulière
-    plt.subplot(1, 2, 2)
-    plt.plot(iteration_list, singular_value_list, marker='o', color='orange', label='Valeur singulière')
-    plt.xlabel("Itérations")
-    plt.ylabel("Plus petite valeur singulière")
-    plt.title("Évolution de la plus petite valeur singulière")
-    plt.grid()
-    plt.legend()
-
-    # Affichage final
-    plt.tight_layout()
-    plt.show()
-
-    return best_pattern, best_fobj
+    return best_pattern, best_fobj, iteration_list, rank_list, singular_value_list

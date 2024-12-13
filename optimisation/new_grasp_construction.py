@@ -1,18 +1,21 @@
-import numpy as np
-
+from numpy import ndarray, ones, random, inf, array, meshgrid
 from typing import Set
+from itertools import combinations, product
+from copy import deepcopy
+from random import sample, choices
 
 from utils.problem_objective import fobj
 from options import GraspConstructionOptions
 
 
-def pattern_to_tuple(P: np.ndarray) -> tuple:
+def pattern_to_tuple(P: ndarray) -> tuple:
     """
     Convert a pattern matrix P (np.ndarray) into a tuple of tuples to make it hashable.
     """
+    
     return tuple(tuple(row) for row in P)
 
-def perturb_pattern(P: np.ndarray, perturbation_rate: float) -> np.ndarray:
+def perturb_pattern(P: ndarray, perturbation_rate: float) -> ndarray:
     """
     Perturb (mutate) the given pattern with a certain perturbation rate.
     Changes a random subset of the entries in the pattern.
@@ -24,17 +27,18 @@ def perturb_pattern(P: np.ndarray, perturbation_rate: float) -> np.ndarray:
     :return: The perturbed pattern.
     :rtype: np.ndarray
     """
+    
     n = P.shape[0]
     num_perturb = max(1, int(perturbation_rate * n * n))  # Number of elements to perturb
-    perturb_indices = np.random.choice(n * n, num_perturb, replace=False)
+    perturb_indices = random.choice(n * n, num_perturb, replace=False)
     
     for index in perturb_indices:
         x, y = divmod(index, n)
-        P[x, y] = np.random.choice([1, -1])  # Randomly flip the value at position (x, y)
+        P[x, y] = random.choice([1, -1])  # Randomly flip the value at position (x, y)
     
     return P
 
-def grasp_constructive_optimized(M: np.ndarray, tested_patterns: Set[tuple], options: GraspConstructionOptions) -> np.ndarray:
+def grasp_constructive_optimized(M: ndarray, tested_patterns: Set[tuple], options: GraspConstructionOptions) -> ndarray:
     """
     Optimized GRASP construction algorithm with minimal randomization and perturbation.
 
@@ -48,90 +52,96 @@ def grasp_constructive_optimized(M: np.ndarray, tested_patterns: Set[tuple], opt
     :rtype: np.ndarray
     """
     
+    # Pattern initialization
     n = M.shape[0]
-    P = np.random.choice([1, -1], size=(n, n))  # Initialize random pattern
-    last_cost = np.inf
-    tested_patterns: Set[tuple] = {pattern_to_tuple(P)}  # Store tested patterns
+    P = random.choice([1, -1], size=(n, n))
+    # P = np.ones((n, n))  # Initialize pattern with all ones
+    
+    # Variables initialization
+    last_cost = inf
     stagnation_count = 0
     repetition_count = 0
+    local_perturbation_rate = options.perturbation_rate
 
+    # Candidate list initialization
     candidate_list = [(i, j) for i in range(n) for j in range(n)]
-    
-    perturbation_rate = options.perturbation_rate
 
+    # Main Construction loop
     while candidate_list:
-        np.random.shuffle(candidate_list)
+        random.shuffle(candidate_list)
+        sampled_groups = []
+        
+        # Random sample groups of candidates
+        combination_size = min(len(candidate_list), options.max_fixed_candidates_per_iteration)
+        
+        while len(candidate_list) >= combination_size:
+            group = tuple(candidate_list[:combination_size])
+            sampled_groups.append(group)
+            candidate_list = candidate_list[combination_size:]
+
+        # Evaluate sampled groups
         costs = []
+        for group in sampled_groups:
+            best_cost = inf
+            best_values = {}
+            
+            sampled_values = [choices([1, -1], k=len(group)) for _ in range(len(group))]
+            
+            for value_combination in sampled_values:
+                P_temp = deepcopy(P)
+                for (i, j), value in zip(group, value_combination):
+                    P_temp[i, j] = value
 
-        # Evaluate all candidates
-        for i, j in candidate_list:
-            best_cost = np.inf
-            best_value = P[i, j]  # Default to current value
-            for value in [1, -1]:
-                if P[i, j] == value:
-                    continue  # Skip redundant checks
-
-                P_temp = P.copy()
-                P_temp[i, j] = value
-                try:
-                    rank, inv_smallest_sv = fobj(M, P_temp)
-                    cost = rank + options.lambda_ * inv_smallest_sv
-                except IndexError:
-                    cost = np.inf
+                rank, inv_smallest_sv = fobj(M, P_temp)
+                cost = rank + options.lambda_ * inv_smallest_sv
 
                 if cost < best_cost:
                     best_cost = cost
-                    best_value = value
+                    best_values = {pos: val for pos, val in zip(group, value_combination)}
 
-            costs.append(((i, j, best_value), best_cost))
+            costs.append((group, best_values, best_cost))
 
-        # Sort by cost and select RCL
-        costs.sort(key=lambda x: x[1])
-        min_cost, max_cost = costs[0][1], costs[-1][1]
 
-        # Simple RCL threshold: Select all candidates with cost <= max_cost
-        threshold = max_cost
-        RCL = [c for c in costs if c[1] <= threshold]
-
-        # If RCL is empty, print debugging information
-        if len(RCL) == 0:
-            print(f"RCL is empty. min_cost: {min_cost}, max_cost: {max_cost}")
-            RCL = costs  # Fallback to using the entire list if RCL is empty
+        # Sort by cost and construct RCL
+        costs.sort(key=lambda x: x[2])
+        RCL = [c for c in costs if c[2] <= costs[0][2] + options.alpha * (costs[-1][2] - costs[0][2])]
 
         # Choose randomly from the RCL
-        selected = np.random.choice(len(RCL))
-        (i, j, value), _ = RCL[selected]
-        P[i, j] = value
+        selected = random.choice(len(RCL))
+        group, best_values, _ = RCL[selected]
+        for (i, j), value in best_values.items():
+            P[i, j] = value
 
         # Check for repetition and mutate if necessary
         current_pattern_tuple = pattern_to_tuple(P)
         while current_pattern_tuple in tested_patterns and repetition_count < options.max_repetitions:
-            P = perturb_pattern(P, perturbation_rate)
+            
+            print("Repetition detected, perturbing pattern...")
+            P = perturb_pattern(P, local_perturbation_rate)
             current_pattern_tuple = pattern_to_tuple(P)
             repetition_count += 1
-            
+
             if repetition_count >= options.max_repetitions:
                 stagnation_count += 1
                 break
 
         # Update cost and stagnation
-        current_cost = costs[0][1]
-        if np.abs(last_cost - current_cost) < options.tolerance:
+        current_cost = costs[0][2]
+        if abs(last_cost - current_cost) < options.tolerance:
             stagnation_count += 1
             if stagnation_count >= options.max_stagnation:
-                # Adaptive perturbation: reduce rate over time
-                perturbation_rate = max(0.01, perturbation_rate * 0.9)  # Reduce by 10% after stagnation
-                num_perturb = max(1, int(perturbation_rate * n * n))
-                perturb_indices = np.random.choice(n * n, num_perturb, replace=False)
+                local_perturbation_rate = max(0.01, local_perturbation_rate * 0.9)  # Reduce by 10%
+                num_perturb = max(1, int(local_perturbation_rate * n * n))
+                perturb_indices = random.choice(n * n, num_perturb, replace=False)
                 for index in perturb_indices:
                     x, y = divmod(index, n)
-                    P[x, y] = np.random.choice([1, -1])
+                    P[x, y] = random.choice([1, -1])
                 stagnation_count = 0
         else:
             stagnation_count = 0
 
-        # Update candidate list (remove the selected one)
-        candidate_list = [(x, y) for x, y in candidate_list if x != i and y != j]
+        # Update candidate list (remove the selected group)
+        candidate_list = [pos for pos in candidate_list if pos not in group]
         last_cost = current_cost
 
     return P
