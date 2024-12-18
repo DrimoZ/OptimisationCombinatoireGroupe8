@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from numpy import ndarray, random, loadtxt, logspace
+from numpy import ndarray, random, loadtxt, logspace, linspace
 import matplotlib.pyplot as plt
 
 from utils.orthogonal_matrix import matrices1_ledm, matrices2_slackngon
@@ -35,6 +35,28 @@ def plot(iteration_list, rank_list, singular_value_list):
     plt.tight_layout()
     plt.show()
 
+# Function to plot the evolution of scores as a function of alpha
+def plot_alpha_vs_scores(alpha_values, scores):
+    """
+    Plots the evolution of the score (rank + lambda_ * singular_value)
+    as a function of alpha values.
+    
+    :param alpha_values: List of alpha values tested
+    :param scores: List of scores corresponding to the alpha values
+    """
+    plt.figure(figsize=(10, 6))
+
+    plt.plot(alpha_values, scores, marker='o', label='Score', color='purple')
+    plt.xlabel("Alpha (α)")
+    plt.ylabel("Score")
+    plt.title("Score Evolution as a Function of Alpha")
+    plt.xscale('log')
+    plt.grid()
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
 # Definition d'une Seed pour la reproductibilité 
 random.seed(42)
 
@@ -50,12 +72,30 @@ M = matrices1_ledm(matrix_options.n)
 # M = loadtxt('matrice_examples/correl5_matrix.txt', dtype=int)
 
 
+# Alpha values to test
+alpha_values = linspace(0.000001, 1, num=2000)  # Evenly spaced alpha values from 0.0001 to 1
+
+# Container for scores
+scores = []
+
 # Temps de début
 starttime: datetime = datetime.now()
 print("\n\n||================================ GRASP ================================||")
 print(f"|| Grasp started on {starttime.date()} at {starttime.time()}                        ||")
 print("||=======================================================================||")
 
+# Loop over alpha values
+# for alpha in alpha_values:
+#     print(f"Testing alpha = {alpha:.4f}")
+#     grasp_options.alpha = alpha  # Update alpha in options
+
+#     # Run GRASP metaheuristic
+#     best_pattern, best_fobj, _, _, _ = metaheuristic_grasp(M, grasp_options)
+
+#     # Calculate the score
+#     rank, smallest_sv = best_fobj
+#     score = rank + 0.03 * smallest_sv
+#     scores.append(score)
 
 
 # Metaheuristique
@@ -84,3 +124,5 @@ print("||=======================================================================
 
 plot(iteration_list, rank_list, singular_value_list)
 
+# Plot results
+plot_alpha_vs_scores(alpha_values, scores)

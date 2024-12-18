@@ -234,12 +234,12 @@ def optimized_local_search(M: ndarray, P: ndarray, tested_patterns: set[tuple], 
         if not neighborhood:
             break
         
-        # Add to tested patterns
-        tested_patterns.add(pattern_to_tuple(current_pattern))
-        
         # Compare neighbors to find the best one
         best_neighbor = None
         for neighbor in neighborhood:
+            # Add to tested patterns
+            tested_patterns.add(pattern_to_tuple(neighbor))
+        
             if compareP1betterthanP2(M, neighbor, current_pattern):
                 best_neighbor = neighbor
                 improved = True

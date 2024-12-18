@@ -129,23 +129,30 @@ def metaheuristic_grasp(M: ndarray, options: GraspOptions) -> tuple[ndarray, tup
             local_search_pattern = optimized_local_search(M=M, P=current_pattern, tested_patterns=tested_patterns, options=options.local_search_options)
             # local_search_pattern, fobj_pattern = metaheuristic_vns(M, best_pattern, current_pattern, vns_k_max, vns_time_limit, [])
             local_search_pattern = current_pattern
-
+            
             # Comparaison avec la meilleure solution
             if compareP1betterthanP2(M, local_search_pattern, best_pattern):
                 best_pattern = local_search_pattern
                 best_fobj = fobj(M, local_search_pattern)
                 
-                
-             # Enregistrer les résultats pour les graphiques
+            # Enregistrer les résultats pour les graphiques
             iteration_list.append(current_iteration + 1)
             rank_list.append(best_fobj[0])
             singular_value_list.append(best_fobj[1])
             
-                # if (best_fobj[0] == 2):
-                    # break
-
+            if (best_fobj[0] == 2):
+                break
+                    
             if len(tested_patterns) >= 2 ** (M.shape[0] * M.shape[1]):
                 break
+        
+        list_length = len(tested_patterns)
+        if list_length >= options.tested_list_max_size:
+            index_to_remove = list_length - options.tested_list_max_size + list_length // 10
+            
+            for _ in range(index_to_remove):
+                tested_patterns.pop()
+            
 
 
     # Console information
